@@ -6,6 +6,7 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import scraperRouter from './routes/scraper.js';
 
 dotenv.config();
 
@@ -135,7 +136,7 @@ app.post('/webhook', async (req, res) => {
     }
 
     if (user.links.length >= user.maxLinks) {
-      return res.status(403).json({ message: 'Link limit reached for your plan' });
+      return res.status(403).json({ message: 'Você atingiu o limite de links para o seu plano' });
     }
 
     user.links.push(message);
@@ -147,9 +148,9 @@ app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-app.get('/links/:userId', async (req, res) => {
-  const { userId } = req.params;
-  const user = await User.findOne({ uuid: userId });
+app.get('/links/:sender', async (req, res) => {
+  const { sender } = req.params;
+  const user = await User.findOne({ sender: sender });
 
   if (user) {
     res.json(user.links);
@@ -158,6 +159,16 @@ app.get('/links/:userId', async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`API running on http://localhost:${process.env.PORT}`);
+// Routes
+app.use('/api', scraperRouter);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something broke!' });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
