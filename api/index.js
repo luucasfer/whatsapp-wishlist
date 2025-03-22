@@ -154,6 +154,7 @@ app.get('/links/:sender', async (req, res) => {
 
   if (user) {
     res.json(user.links);
+    console.log(`getting links for: ${user.sender} - links quantity: ${user.links.length}`)
   } else {
     res.status(404).json({ message: 'User not found' });
   }

@@ -31,19 +31,16 @@ function WishList() {
   const toast = useToast();
 
   const extractInfoFromUrl = async (url) => {
-    try {      
-      let title = 'Produto sem título';
-      let price = "R$0,00";
-      let imageUrl = null;
+    try {
+      let title, price, imageUrl;
 
-      //title = await axios.get(`/api/scrape-title?url=${encodeURIComponent(url)}`);
-      const imageResponse = await api.get(`/api/scrape-image?url=${encodeURIComponent(url)}`);
-      imageUrl = imageResponse.data.imageUrl;
-      //price = await axios.get(`/api/scrape-price?url=${encodeURIComponent(url)}`);
+      const response = await api.get(`/api/scrape-data?url=${encodeURIComponent(url)}`);
+      ({ title, price, imageUrl } = response.data);
+
       return { title, price, imageUrl };
     } catch (err) {
-      console.error('Error fetching product info:', err);
-      return { title: 'erro', price: "R$1,00", imageUrl: null };
+      console.error('[Wishlist][extractInfoUrl] - ', err);
+      return { title: 'Titulo não encontrado', price: "R$ 0,00", imageUrl: null };
     }
   };
 
@@ -63,7 +60,7 @@ function WishList() {
       } catch (err) {
         setError('Falha ao carregar lista de desejos');
         toast({
-          title: 'Erro',
+          title: 'Erro inesperado',
           description: 'Falha ao carregar lista de desejos',
           status: 'error',
           duration: 5000,
@@ -103,7 +100,7 @@ function WishList() {
       <Heading as="h1" size="xl" textAlign="center">
         KEROZAP - Lista de Desejos
       </Heading>
-      
+
       {links.length === 0 ? (
         <Text textAlign="center">Nenhum item na sua lista de desejos ainda</Text>
       ) : (
@@ -118,23 +115,28 @@ function WishList() {
               _hover={{ boxShadow: 'md' }}
             >
               <HStack spacing={4} align="center">
-                <Box position="relative" width="150px" height="150px">
-                  <Image
-                    src={productInfo[link]?.imageUrl}
-                    alt={productInfo[link]?.title}
-                    objectFit="cover"
-                    borderRadius="md"
-                    fallback={
-                      <Skeleton width="150px" height="150px" borderRadius="md" />
-                    }
-                  />
+                <Box position="relative" width="180px" height="200px">
+                  <picture>
+                    <source srcSet={productInfo[link]?.imageUrl} type="image/webp" />
+                    <source srcSet="https://www.gstatic.com/webp/gallery/1.webp" type="image/jpeg" />
+                    <img
+                      src={productInfo[link]?.imageUrl || 'https://www.gstatic.com/webp/gallery/1.webp'}
+                      alt={productInfo[link]?.title}
+                      style={{ objectFit: 'cover', borderRadius: '0.375rem', width: '100%', height: '100%' }}
+                      onError={(e) => {
+                        console.error('Image failed to load:', e);
+                        console.log('Image URL:', productInfo[link]?.imageUrl);
+                        e.target.src = 'https://www.gstatic.com/webp/gallery/1.webp'; // Fallback image
+                      }}
+                    />
+                  </picture>
                 </Box>
                 <Box flex={1}>
                   <VStack align="start" spacing={1}>
-                    <Link 
-                      href={link} 
-                      isExternal 
-                      color="blue.500" 
+                    <Link
+                      href={link}
+                      isExternal
+                      color="blue.500"
                       fontSize="lg"
                       fontWeight="medium"
                       _hover={{ textDecoration: 'none', color: 'blue.600' }}
@@ -143,7 +145,7 @@ function WishList() {
                     </Link>
                     {productInfo[link]?.price && (
                       <Text color="green.600" fontWeight="bold">
-                        {productInfo[link].price}
+                        {`${productInfo[link].price}`}
                       </Text>
                     )}
                   </VStack>
