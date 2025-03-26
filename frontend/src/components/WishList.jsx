@@ -8,10 +8,8 @@ import {
   Text,
   Box,
   useToast,
-  Image,
   HStack,
   Spinner,
-  Skeleton
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -19,11 +17,14 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: "http://localhost:3001",
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 function WishList() {
+  // Extract the sender from the last part of the URL
+  const sender = window.location.pathname.split('/').pop();
+
   const [links, setLinks] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,11 +33,8 @@ function WishList() {
 
   const extractInfoFromUrl = async (url) => {
     try {
-      let title, price, imageUrl;
-
       const response = await api.get(`/api/scrape-data?url=${encodeURIComponent(url)}`);
-      ({ title, price, imageUrl } = response.data);
-
+      const { title, price, imageUrl } = response.data;
       return { title, price, imageUrl };
     } catch (err) {
       console.error('[Wishlist][extractInfoUrl] - ', err);
@@ -47,10 +45,9 @@ function WishList() {
   useEffect(() => {
     const fetchLinks = async () => {
       try {
-        // Replace with actual user ID when authentication is implemented
-        const sender = 'test-user';
         const response = await api.get(`/links/${sender}`);
         setLinks(response.data);
+
         // Extract info from URLs
         const info = {};
         for (const link of response.data) {
@@ -72,7 +69,7 @@ function WishList() {
     };
 
     fetchLinks();
-  }, [toast]);
+  }, [sender, toast]);
 
   if (error) {
     return (
@@ -116,20 +113,14 @@ function WishList() {
             >
               <HStack spacing={4} align="center">
                 <Box position="relative" width="180px" height="200px">
-                  <picture>
-                    <source srcSet={productInfo[link]?.imageUrl} type="image/webp" />
-                    <source srcSet="https://www.gstatic.com/webp/gallery/1.webp" type="image/jpeg" />
-                    <img
-                      src={productInfo[link]?.imageUrl || 'https://www.gstatic.com/webp/gallery/1.webp'}
-                      alt={productInfo[link]?.title}
-                      style={{ objectFit: 'cover', borderRadius: '0.375rem', width: '100%', height: '100%' }}
-                      onError={(e) => {
-                        console.error('Image failed to load:', e);
-                        console.log('Image URL:', productInfo[link]?.imageUrl);
-                        e.target.src = 'https://www.gstatic.com/webp/gallery/1.webp'; // Fallback image
-                      }}
-                    />
-                  </picture>
+                  <img
+                    src={productInfo[link]?.imageUrl || 'https://via.placeholder.com/180x200'}
+                    alt={productInfo[link]?.title}
+                    style={{ objectFit: 'cover', borderRadius: '0.375rem', width: '100%', height: '100%' }}
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/180x200'; // Fallback image
+                    }}
+                  />
                 </Box>
                 <Box flex={1}>
                   <VStack align="start" spacing={1}>
@@ -159,4 +150,4 @@ function WishList() {
   );
 }
 
-export default WishList; 
+export default WishList;

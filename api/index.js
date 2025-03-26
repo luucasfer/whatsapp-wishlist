@@ -7,6 +7,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import scraperRouter from './routes/scraper.js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -128,25 +129,58 @@ app.get('/users', async (req, res) => {
 app.post('/webhook', async (req, res) => {
   const { message, sender } = req.body;
 
-  if (message && message.includes('http')) {
-    let user = await User.findOne({ sender });
-    if (!user) {
-      const uuid = uuidv4();
-      user = new User({ uuid, sender, links: [], planType: 'Free', maxLinks: 10 });
-    }
+  if (message && message.includes('https')) {
+    try {
+      let user = await User.findOne({ sender });
+      if (!user) {
+        const uuid = uuidv4();
+        user = new User({ uuid, sender, links: [], planType: 'Free', maxLinks: 10 });
+      }
 
-    if (user.links.length >= user.maxLinks) {
-      return res.status(403).json({ message: 'Você atingiu o limite de links para o seu plano' });
-    }
+      if (user.links.length >= user.maxLinks) {
+        return res.status(403).json({ message: 'limite de links para o seu plano' });
+      }
 
-    user.links.push(message);
-    user.updatedAt = new Date();
-    await user.save();
-    console.log(`User ${user.uuid} sent link: ${message}`);
+      user.links.push(message);
+      user.updatedAt = new Date();
+      await user.save();
+      console.log(`User ${user.uuid} sent the link: ${message}`);
+
+      // send a message to the user with the link to its wishlist page
+      const userUrl = `http://localhost:3000/api/${sender}`;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      await axios.post(`${baseUrl}/send-whatsapp-response`, { sender, userUrl });
+      res.sendStatus(200);
+
+    } catch (error) {
+      console.error('Error saving link:', error);
+      return res.status(500).json({ message: 'Error saving link', error: error.message });
+    }
   }
-
-  res.sendStatus(200);
 });
+
+
+app.post('/send-whatsapp-response', async (req, res) => {
+  try {
+    const { sender, userUrl } = req.body;
+
+    // Simulate sending a WhatsApp response
+    console.log(`Sending WhatsApp response to ${sender}: ${userUrl}`);
+
+    // Return the response
+    return res.status(200).json({
+      message: 'WhatsApp response sent successfully',
+      userUrl,
+    });
+  } catch (error) {
+    console.error('Error sending WhatsApp response:', error);
+    return res.status(500).json({
+      message: 'Error sending WhatsApp response',
+      error: error.message,
+    });
+  }
+});
+
 
 app.get('/links/:sender', async (req, res) => {
   const { sender } = req.params;
@@ -164,7 +198,7 @@ app.get('/links/:sender', async (req, res) => {
 app.use('/api', scraperRouter);
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, res) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something broke!' });
 });
